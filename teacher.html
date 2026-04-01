@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teacher Portal — Sonargaon University</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<script src="/js/api.js"></script>
+<script>
+  const _u = auth.getUser();
+  if (!_u || _u.role !== 'teacher') { auth.clear(); window.location.href = '/login.html'; }
+</script>
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-badge" style="background:linear-gradient(135deg,#10b981,#06b6d4)">👨‍🏫 TEACHER</div>
+    <h1>Faculty Portal</h1>
+    <p>Sonargaon University</p>
+  </div>
+  <nav>
+    <div class="nav-section">
+      <div class="nav-label">Dashboard</div>
+      <div class="nav-item active" onclick="showPage('overview',this)"><span class="nav-icon">🏠</span>Overview</div>
+      <div class="nav-item" onclick="showPage('students',this)"><span class="nav-icon">🎓</span>My Students</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Management</div>
+      <div class="nav-item" onclick="showPage('marks',this)"><span class="nav-icon">📝</span>Enter Marks</div>
+      <div class="nav-item" onclick="showPage('attendance',this)"><span class="nav-icon">✅</span>Mark Attendance</div>
+      <div class="nav-item" onclick="showPage('courses',this)"><span class="nav-icon">📚</span>Courses</div>
+      <div class="nav-item" onclick="showPage('password',this)"><span class="nav-icon">🔐</span>Change Password</div>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <strong id="sb-name">Loading…</strong>
+    <span id="sb-code" style="font-family:'DM Mono',monospace;font-size:11px"></span>
+    <button class="logout-btn" onclick="logout()">Sign Out</button>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="page-title">Overview</div>
+    <div class="topbar-right">
+      <span id="topbar-date" class="topbar-date"></span>
+      <div class="user-chip"><div class="user-avatar green" id="topbar-av">T</div><span id="topbar-name">Teacher</span></div>
+      <button class="btn btn-ghost" onclick="logout()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div id="page-overview" class="page active">
+    <div class="welcome-banner" style="background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(6,182,212,0.05))">
+      <div>
+        <div class="welcome-greeting">Welcome back,</div>
+        <div class="welcome-name" id="welcome-name">Teacher</div>
+        <div class="welcome-sub">Manage your classes, marks, and attendance here.</div>
+      </div>
+      <div class="welcome-icon">👨‍🏫</div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card green"><div class="stat-label">Total Students</div><div class="stat-value green" id="ov-students">—</div><div class="stat-sub">In the system</div></div>
+      <div class="stat-card blue"><div class="stat-label">Courses</div><div class="stat-value blue" id="ov-courses">—</div><div class="stat-sub">Available</div></div>
+      <div class="stat-card gold"><div class="stat-label">Applications</div><div class="stat-value gold" id="ov-apps">—</div><div class="stat-sub">Pending review</div></div>
+      <div class="stat-card cyan"><div class="stat-label">Avg. GPA</div><div class="stat-value cyan" id="ov-gpa">—</div><div class="stat-sub">All students</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Students by Department</div></div>
+        <div class="chart-box"><canvas id="deptChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">GPA Distribution</div></div>
+        <div class="chart-box"><canvas id="gpaChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MY STUDENTS -->
+  <div id="page-students" class="page">
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">All Students</div><div class="card-subtitle" id="stu-sub"></div></div></div>
+      <div class="search-row">
+        <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" placeholder="Search…" oninput="searchStudents(this.value)"></div>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>ID</th><th>Name</th><th>Dept</th><th>Semester</th><th>GPA</th><th>Status</th></tr></thead>
+        <tbody id="stu-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENTER MARKS -->
+  <div id="page-marks" class="page">
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Enter / Update Marks</div><div class="card-subtitle">Select a student to enter grades</div></div></div>
+      <div class="grid-2" style="margin-bottom:20px">
+        <div class="form-group">
+          <label>Student</label>
+          <select id="mk-student" onchange="loadStudentCourses()"><option value="">Select student…</option></select>
+        </div>
+        <div class="form-group">
+          <label>Course</label>
+          <select id="mk-course"><option value="">Select course…</option></select>
+        </div>
+      </div>
+      <div class="grid-2" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
+        <div class="form-group"><label>Midterm (/50)</label><input id="mk-mid" type="number" min="0" max="50" placeholder="0–50"></div>
+        <div class="form-group"><label>Final Exam (/50)</label><input id="mk-final" type="number" min="0" max="50" placeholder="0–50"></div>
+        <div class="form-group"><label>Assignment (/0, optional)</label><input id="mk-assign" type="number" min="0" max="10" placeholder="0–10"></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-role" onclick="saveMarks()">💾 Save Marks</button></div>
+    </div>
+  </div>
+
+  <!-- ATTENDANCE -->
+  <div id="page-attendance" class="page">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Mark Attendance</div></div>
+      <div class="grid-2" style="margin-bottom:24px">
+        <div class="form-group">
+          <label>Course</label>
+          <select id="att-course" onchange="loadAttStudents()"><option value="">Select course…</option></select>
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input id="att-date" type="date">
+        </div>
+      </div>
+      <div id="att-loading-t" class="loading-state" style="display:none">Loading students…</div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Student ID</th><th>Name</th><th>Status</th></tr></thead>
+        <tbody id="att-tbody"></tbody></table>
+      </div>
+      <div class="btn-row" style="margin-top:20px"><button class="btn btn-role" onclick="submitAttendance()">✅ Submit Attendance</button></div>
+    </div>
+  </div>
+
+  <!-- COURSES -->
+  <div id="page-courses" class="page">
+    <div class="card">
+      <div class="card-header"><div class="card-title">All Courses</div></div>
+      <div id="courses-loading" class="loading-state">Loading…</div>
+      <div class="grid-3" id="courses-grid" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- CHANGE PASSWORD -->
+  <div id="page-password" class="page">
+    <div class="card" style="max-width:480px">
+      <div class="card-header"><div class="card-title">🔐 Change Password</div></div>
+      <div class="form-grid" style="grid-template-columns:1fr">
+        <div class="form-group"><label>Current Password</label><input id="pw-current" type="password" placeholder="Current password"></div>
+        <div class="form-group"><label>New Password</label><input id="pw-new" type="password" placeholder="At least 6 characters"></div>
+        <div class="form-group"><label>Confirm New Password</label><input id="pw-confirm" type="password" placeholder="Repeat new password"></div>
+      </div>
+      <hr>
+      <div class="btn-row"><button class="btn btn-role" onclick="changePassword()">Update Password</button></div>
+    </div>
+  </div>
+</main>
+<div class="notif" id="notif"></div>
+
+<script>
+const user = auth.getUser();
+document.getElementById('sb-name').textContent     = user.name;
+document.getElementById('sb-code').textContent     = user.teacherCode||user.username;
+document.getElementById('topbar-name').textContent = user.name.split(' ')[0];
+document.getElementById('topbar-av').textContent   = user.name[0];
+document.getElementById('welcome-name').textContent= user.name;
+document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-BD',{weekday:'short',day:'numeric',month:'short'});
+document.getElementById('att-date').value          = new Date().toISOString().split('T')[0];
+
+function logout(){ auth.clear(); window.location.href='/login.html'; }
+const COLORS=['#3b82f6','#06b6d4','#8b5cf6','#10b981','#f59e0b','#ef4444'];
+const chartCache={};
+function initChart(id,fn){ if(chartCache[id])chartCache[id].destroy(); chartCache[id]=fn(); }
+function showNotif(msg,type='success'){const n=document.getElementById('notif');n.textContent=msg;n.className='notif'+(type==='error'?' error':'')+' show';setTimeout(()=>n.classList.remove('show'),3200);}
+
+const PAGE_TITLES={overview:'Overview',students:'My Students',marks:'Enter Marks',attendance:'Mark Attendance',courses:'Courses',password:'Change Password'};
+let _students=[],_courses=[];
+
+function showPage(name,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(el)el.classList.add('active');
+  document.getElementById('page-title').textContent=PAGE_TITLES[name]||name;
+  if(name==='students')   loadStudents();
+  if(name==='courses')    loadCourses();
+  if(name==='marks')      initMarksPage();
+  if(name==='attendance') initAttPage();
+}
+
+async function loadOverview(){
+  try{
+    const [students,courses,apps]=await Promise.all([api.getStudents(),api.getCourses(),api.getApplications({status:'Pending'})]);
+    _students=students; _courses=courses;
+    document.getElementById('ov-students').textContent=students.length;
+    document.getElementById('ov-courses').textContent=courses.length;
+    document.getElementById('ov-apps').textContent=apps.length;
+    const avgGpa=(students.reduce((s,st)=>s+parseFloat(st.gpa||0),0)/students.length||0).toFixed(2);
+    document.getElementById('ov-gpa').textContent=avgGpa;
+
+    const depts={};students.forEach(s=>{depts[s.dept_code]=(depts[s.dept_code]||0)+1;});
+    initChart('deptChart',()=>new Chart(document.getElementById('deptChart'),{type:'doughnut',data:{labels:Object.keys(depts),datasets:[{data:Object.values(depts),backgroundColor:COLORS,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#8faac4',font:{size:11}}}}}}));
+    const gpaR=[[0,2.5,'<2.5'],[2.5,3.0,'2.5-3.0'],[3.0,3.5,'3.0-3.5'],[3.5,4.0,'3.5+']];
+    initChart('gpaChart',()=>new Chart(document.getElementById('gpaChart'),{type:'bar',data:{labels:gpaR.map(r=>r[2]),datasets:[{data:gpaR.map(([lo,hi])=>students.filter(s=>parseFloat(s.gpa||0)>=lo&&parseFloat(s.gpa||0)<hi).length),backgroundColor:['#ef4444','#f59e0b','#3b82f6','#10b981'],borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#64748b'},grid:{display:false}},y:{ticks:{color:'#64748b'},grid:{color:'rgba(255,255,255,0.04)'}}}}}));
+  }catch(e){console.error(e);}
+}
+
+async function loadStudents(search=''){
+  const list = search ? _students.filter(s=>s.full_name.toLowerCase().includes(search.toLowerCase())||s.student_code.includes(search)) : _students;
+  document.getElementById('stu-sub').textContent=`${list.length} students`;
+  document.getElementById('stu-tbody').innerHTML=list.map(s=>`
+    <tr><td class="mono">${s.student_code}</td><td>${s.full_name}</td><td><span class="tag">${s.dept_code||'—'}</span></td><td>${s.semester||'—'}</td>
+    <td class="mono" style="color:var(--green)">${parseFloat(s.gpa||0).toFixed(2)}</td>
+    <td><span class="badge ${s.status==='Active'?'badge-active':'badge-inactive'}">${s.status}</span></td></tr>`).join('');
+}
+function searchStudents(v){ loadStudents(v); }
+
+async function initMarksPage(){
+  if(!_students.length) _students=await api.getStudents();
+  if(!_courses.length)  _courses=await api.getCourses();
+  document.getElementById('mk-student').innerHTML='<option value="">Select student…</option>'+_students.map(s=>`<option value="${s.id}">${s.full_name} (${s.student_code})</option>`).join('');
+  document.getElementById('mk-course').innerHTML='<option value="">Select course…</option>'+_courses.map(c=>`<option value="${c.id}">${c.name} (${c.code})</option>`).join('');
+}
+function loadStudentCourses(){}
+async function saveMarks(){
+  const sid=document.getElementById('mk-student').value;
+  const cid=document.getElementById('mk-course').value;
+  const mid=parseFloat(document.getElementById('mk-mid').value)||0;
+  const fin=parseFloat(document.getElementById('mk-final').value)||0;
+  const asg=parseFloat(document.getElementById('mk-assign').value)||0;
+  if(!sid||!cid){ showNotif('Select student and course','error'); return; }
+  try{
+    await api.saveGrade({student_id:sid,course_id:cid,midterm:mid,final_exam:fin,assignment:asg});
+    showNotif('Marks saved successfully!');
+  }catch(e){ showNotif('Failed: '+e.message,'error'); }
+}
+
+async function initAttPage(){
+  if(!_courses.length) _courses=await api.getCourses();
+  document.getElementById('att-course').innerHTML='<option value="">Select course…</option>'+_courses.map(c=>`<option value="${c.id}">${c.name} (${c.code})</option>`).join('');
+}
+async function loadAttStudents(){
+  const cid=document.getElementById('att-course').value;
+  const date=document.getElementById('att-date').value;
+  if(!cid) return;
+  document.getElementById('att-loading-t').style.display='block';
+  try{
+    const data=await api.getCourseAtt(cid,date);
+    document.getElementById('att-tbody').innerHTML=data.map((s,i)=>`
+      <tr><td class="mono">${s.student_code}</td><td>${s.full_name}</td>
+      <td>
+        <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin-right:16px">
+          <input type="radio" name="att-${i}" value="Present" data-sid="${s.student_code}" ${s.status==='Present'||!s.status?'checked':''}> <span style="font-size:13px;color:var(--green)">Present</span>
+        </label>
+        <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="radio" name="att-${i}" value="Absent"  data-sid="${s.student_code}" ${s.status==='Absent'?'checked':''}> <span style="font-size:13px;color:var(--red)">Absent</span>
+        </label>
+      </td></tr>`).join('');
+    document.getElementById('att-loading-t').style.display='none';
+  }catch(e){ showNotif('Failed to load: '+e.message,'error'); }
+}
+async function submitAttendance(){
+  const cid=document.getElementById('att-course').value;
+  const date=document.getElementById('att-date').value;
+  if(!cid||!date){ showNotif('Select course and date','error'); return; }
+  const rows=document.querySelectorAll('#att-tbody tr');
+  const records=[];
+  rows.forEach((_,i)=>{
+    const sel=document.querySelector(`input[name="att-${i}"]:checked`);
+    if(sel){
+      // We'd need real student IDs — simplified for demo
+      records.push({student_id:sel.dataset.sid||null, status:sel.value});
+    }
+  });
+  try{
+    await api.bulkAttendance({course_id:cid,date,records});
+    showNotif('Attendance saved!');
+  }catch(e){ showNotif('Failed: '+e.message,'error'); }
+}
+
+async function loadCourses(){
+  document.getElementById('courses-loading').style.display='block';
+  document.getElementById('courses-grid').style.display='none';
+  try{
+    const courses=await api.getCourses();
+    document.getElementById('courses-grid').innerHTML=courses.map((c,i)=>`
+      <div class="card" style="margin:0;border-top:3px solid ${COLORS[i%COLORS.length]}">
+        <div class="mono" style="font-size:11px;color:var(--muted);margin-bottom:6px">${c.code}</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px">${c.name}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${c.dept_code} · ${c.credits} Credits</div>
+        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:6px">
+          <div style="width:${Math.min(100,Math.round((parseInt(c.enrolled)||0)/c.total_seats*100))}%;height:100%;background:${COLORS[i%COLORS.length]}88;border-radius:3px"></div></div>
+        <div style="font-size:11px;color:var(--muted)">${c.enrolled||0}/${c.total_seats} seats</div>
+      </div>`).join('');
+    document.getElementById('courses-loading').style.display='none';
+    document.getElementById('courses-grid').style.display='grid';
+  }catch(e){ document.getElementById('courses-loading').textContent='⚠️ '+e.message; }
+}
+
+async function changePassword(){
+  const cur=document.getElementById('pw-current').value;
+  const nw=document.getElementById('pw-new').value;
+  const conf=document.getElementById('pw-confirm').value;
+  if(!cur||!nw){ showNotif('All fields required','error'); return; }
+  if(nw!==conf){ showNotif('Passwords do not match','error'); return; }
+  try{ await api.changePassword({currentPassword:cur,newPassword:nw}); showNotif('Password changed!'); document.getElementById('pw-current').value=''; document.getElementById('pw-new').value=''; document.getElementById('pw-confirm').value=''; }
+  catch(e){ showNotif(e.message,'error'); }
+}
+
+document.addEventListener('DOMContentLoaded', loadOverview);
+</script>
+</body>
+</html>

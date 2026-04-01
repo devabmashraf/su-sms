@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sonargaon University — Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c14;--panel:#0e1520;--border:#1a2540;--accent:#3b82f6;--accent2:#06b6d4;--gold:#f59e0b;--green:#10b981;--red:#ef4444;--text:#e2e8f0;--muted:#4a6080;--light:#8faac4}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:stretch;overflow:hidden}
+.left-panel{width:55%;position:relative;display:flex;flex-direction:column;justify-content:center;padding:60px;overflow:hidden}
+.left-panel::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 20% 50%,rgba(59,130,246,.12) 0%,transparent 60%),radial-gradient(ellipse 60% 80% at 80% 20%,rgba(6,182,212,.08) 0%,transparent 50%)}
+.grid-bg{position:absolute;inset:0;overflow:hidden;opacity:.06}
+.grid-bg::before{content:'';position:absolute;inset:-50%;background-image:linear-gradient(rgba(59,130,246,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.5) 1px,transparent 1px);background-size:60px 60px;animation:gridMove 20s linear infinite}
+@keyframes gridMove{from{transform:translate(0,0)}to{transform:translate(60px,60px)}}
+.left-content{position:relative;z-index:2}
+.uni-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.25);padding:6px 14px;border-radius:20px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:32px}
+.left-content h1{font-family:'Playfair Display',serif;font-size:clamp(36px,4vw,52px);font-weight:900;line-height:1.1;margin-bottom:20px}
+.left-content h1 em{font-style:italic;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.left-content p{font-size:15px;color:var(--light);line-height:1.7;max-width:420px;margin-bottom:40px}
+.role-previews{display:flex;gap:12px;flex-wrap:wrap}
+.role-preview{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--border);font-size:13px;color:var(--light)}
+.role-icon{font-size:20px}
+.role-name{font-weight:600;font-size:13px}
+.role-desc{font-size:11px;color:var(--muted)}
+.right-panel{width:45%;display:flex;align-items:center;justify-content:center;padding:48px 52px;background:var(--panel);border-left:1px solid var(--border)}
+.login-box{width:100%;max-width:380px}
+.login-header{margin-bottom:30px}
+.login-header h2{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;margin-bottom:6px}
+.login-header p{font-size:13px;color:var(--muted)}
+.role-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:24px}
+.role-tab{display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 8px;border-radius:10px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;transition:all .2s}
+.role-tab:hover{border-color:var(--accent);color:var(--light)}
+.role-tab.active{background:rgba(59,130,246,.1);border-color:var(--accent);color:var(--accent)}
+.role-tab.teacher.active{background:rgba(16,185,129,.1);border-color:var(--green);color:var(--green)}
+.role-tab.admin.active{background:rgba(245,158,11,.1);border-color:var(--gold);color:var(--gold)}
+.tab-icon{font-size:20px}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.input-wrap{position:relative}
+.input-wrap .icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none}
+.input-wrap input{width:100%;padding:12px 14px 12px 42px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;transition:all .2s}
+.input-wrap input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.1);background:rgba(59,130,246,.03)}
+.toggle-pw{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px}
+.error-msg{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:16px;display:none}
+.error-msg.show{display:block;animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.btn-login{width:100%;padding:14px;border:none;border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;letter-spacing:.5px;transition:all .25s;position:relative;overflow:hidden}
+.btn-login.student{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff}
+.btn-login.teacher{background:linear-gradient(135deg,#10b981,#059669);color:#fff}
+.btn-login.admin{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff}
+.btn-login:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.btn-login:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.divider{display:flex;align-items:center;gap:12px;margin:20px 0}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.divider span{font-size:11px;color:var(--muted);white-space:nowrap}
+.demo-creds{display:flex;flex-direction:column;gap:6px}
+.demo-cred{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.02);border:1px solid var(--border);font-size:12px;cursor:pointer;transition:border-color .2s}
+.demo-cred:hover{border-color:var(--accent)}
+.demo-cred-label{color:var(--muted)}
+.demo-cred-val{font-family:'DM Mono',monospace;color:var(--light)}
+.demo-cred-use{font-size:10px;color:var(--accent);font-weight:600}
+.spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div class="left-panel">
+  <div class="grid-bg"></div>
+  <div class="left-content">
+    <div class="uni-badge">🎓 Sonargaon University</div>
+    <h1>Student <em>Management</em><br>System</h1>
+    <p>A unified portal for students, faculty, and administration — powered by a live cloud database.</p>
+    <div class="role-previews">
+      <div class="role-preview"><span class="role-icon">🎓</span><div><div class="role-name">Students</div><div class="role-desc">Grades · Attendance · Fees</div></div></div>
+      <div class="role-preview"><span class="role-icon">👨‍🏫</span><div><div class="role-name">Teachers</div><div class="role-desc">Marks · Classes · Reports</div></div></div>
+      <div class="role-preview"><span class="role-icon">🛡️</span><div><div class="role-name">Admin</div><div class="role-desc">Full system control</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="right-panel">
+  <div class="login-box">
+    <div class="login-header">
+      <h2>Welcome back</h2>
+      <p>Sign in with your university credentials</p>
+    </div>
+
+    <div class="role-tabs">
+      <button class="role-tab active"   data-role="student" onclick="switchRole('student',this)"><span class="tab-icon">🎓</span>Student</button>
+      <button class="role-tab teacher"  data-role="teacher" onclick="switchRole('teacher',this)"><span class="tab-icon">👨‍🏫</span>Teacher</button>
+      <button class="role-tab admin"    data-role="admin"   onclick="switchRole('admin',this)"><span class="tab-icon">🛡️</span>Admin</button>
+    </div>
+
+    <div class="error-msg" id="error-msg"></div>
+
+    <div class="form-group">
+      <label id="id-label">Student ID</label>
+      <div class="input-wrap"><span class="icon">🪪</span>
+        <input type="text" id="login-id" placeholder="e.g. SU-2024-001" autocomplete="username">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <div class="input-wrap"><span class="icon">🔒</span>
+        <input type="password" id="login-pw" placeholder="Enter your password" autocomplete="current-password">
+        <button class="toggle-pw" onclick="togglePw()" id="pw-eye" tabindex="-1">👁</button>
+      </div>
+    </div>
+
+    <button class="btn-login student" id="login-btn" onclick="doLogin()">
+      <span id="btn-text">Sign In as Student</span>
+      <div class="spinner" id="spinner"></div>
+    </button>
+
+    <div class="divider"><span>Demo Accounts</span></div>
+    <div class="demo-creds" id="demo-creds"></div>
+  </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script>
+// If already logged in, redirect
+if (auth.isLoggedIn()) {
+  const u = auth.getUser();
+  if (u) window.location.href = u.role === 'admin' ? '/admin.html' : u.role === 'teacher' ? '/teacher.html' : '/student.html';
+}
+
+const DEMO = {
+  student: [{id:'SU-2024-001',pw:'password',label:'Rahim Uddin (CSE)'}],
+  teacher: [{id:'TCH-001',    pw:'password',label:'Dr. Hasan (CSE)'}],
+  admin:   [{id:'admin',      pw:'password',label:'Super Admin'}],
+};
+
+const LABELS = {student:'Student ID',teacher:'Teacher ID',admin:'Admin Username'};
+const PLACEHOLDERS = {student:'e.g. SU-2024-001',teacher:'e.g. TCH-001',admin:'e.g. admin'};
+const BTN_TEXT = {student:'Sign In as Student',teacher:'Sign In as Teacher',admin:'Sign In as Admin'};
+let currentRole = 'student';
+
+function switchRole(role, el) {
+  currentRole = role;
+  document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('id-label').textContent   = LABELS[role];
+  document.getElementById('login-id').placeholder   = PLACEHOLDERS[role];
+  document.getElementById('btn-text').textContent   = BTN_TEXT[role];
+  document.getElementById('login-btn').className    = `btn-login ${role}`;
+  document.getElementById('login-id').value = '';
+  document.getElementById('login-pw').value = '';
+  document.getElementById('error-msg').classList.remove('show');
+  renderDemo();
+}
+
+function renderDemo() {
+  document.getElementById('demo-creds').innerHTML = DEMO[currentRole].map(d => `
+    <div class="demo-cred" onclick="fill('${d.id}','${d.pw}')">
+      <span class="demo-cred-label">${d.label}</span>
+      <span class="demo-cred-val">${d.id}</span>
+      <span class="demo-cred-use">USE →</span>
+    </div>`).join('');
+}
+
+function fill(id, pw) {
+  document.getElementById('login-id').value = id;
+  document.getElementById('login-pw').value = pw;
+}
+
+function togglePw() {
+  const inp = document.getElementById('login-pw');
+  const eye = document.getElementById('pw-eye');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  eye.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+
+async function doLogin() {
+  const username = document.getElementById('login-id').value.trim();
+  const password = document.getElementById('login-pw').value;
+  const errEl    = document.getElementById('error-msg');
+  errEl.classList.remove('show');
+
+  if (!username || !password) {
+    errEl.textContent = '⚠️ Please enter your ID and password.';
+    errEl.classList.add('show'); return;
+  }
+
+  const btn = document.getElementById('login-btn');
+  document.getElementById('btn-text').style.display = 'none';
+  document.getElementById('spinner').style.display = 'block';
+  btn.disabled = true;
+
+  try {
+    const data = await api.login({ username, password });
+    auth.save(data.token, data.user);
+    // Redirect by role
+    const dest = { admin:'/admin.html', teacher:'/teacher.html', student:'/student.html' };
+    window.location.href = dest[data.user.role] || '/';
+  } catch (err) {
+    errEl.textContent = '❌ ' + (err.message || 'Login failed');
+    errEl.classList.add('show');
+  } finally {
+    document.getElementById('btn-text').style.display = 'block';
+    document.getElementById('spinner').style.display = 'none';
+    btn.disabled = false;
+  }
+}
+
+document.addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+renderDemo();
+</script>
+</body>
+</html>

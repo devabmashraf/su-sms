@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel — Sonargaon University SMS</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+
+<!-- AUTH GUARD -->
+<script src="/js/api.js"></script>
+<script>
+  const _u = auth.getUser();
+  if (!_u || _u.role !== 'admin') { auth.clear(); window.location.href = '/login.html'; }
+</script>
+
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-badge">🛡️ ADMIN</div>
+    <h1>Sonargaon University</h1>
+    <p>Student Management System</p>
+  </div>
+  <nav>
+    <div class="nav-section">
+      <div class="nav-label">Overview</div>
+      <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">🏠</span>Dashboard</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Admissions</div>
+      <div class="nav-item" onclick="showPage('apply',this)"><span class="nav-icon">📝</span>New Application</div>
+      <div class="nav-item" onclick="showPage('applications',this)"><span class="nav-icon">📋</span>All Applications</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Students</div>
+      <div class="nav-item" onclick="showPage('students',this)"><span class="nav-icon">🎓</span>Student Directory</div>
+      <div class="nav-item" onclick="showPage('enroll',this)"><span class="nav-icon">➕</span>Enroll Student</div>
+      <div class="nav-item" onclick="showPage('grades',this)"><span class="nav-icon">📊</span>Grades</div>
+      <div class="nav-item" onclick="showPage('attendance',this)"><span class="nav-icon">✅</span>Attendance</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Administration</div>
+      <div class="nav-item" onclick="showPage('fees',this)"><span class="nav-icon">💳</span>Fee Management</div>
+      <div class="nav-item" onclick="showPage('courses',this)"><span class="nav-icon">📚</span>Courses</div>
+      <div class="nav-item" onclick="showPage('analytics',this)"><span class="nav-icon">📈</span>Analytics</div>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <strong id="sb-name">Admin</strong>
+    <span class="role-chip gold">🛡️ Admin</span>
+    <button class="logout-btn" onclick="logout()">Sign Out</button>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="page-title">Dashboard</div>
+    <div class="topbar-right">
+      <span id="topbar-date" class="topbar-date"></span>
+      <div class="user-chip"><div class="user-avatar gold" id="topbar-av">A</div><span id="topbar-name">Admin</span></div>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD ── -->
+  <div id="page-dashboard" class="page active">
+    <div id="dash-loading" class="loading-state">⏳ Loading dashboard…</div>
+    <div id="dash-content" style="display:none">
+      <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-label">Total Students</div><div class="stat-value blue" id="st-students">—</div><div class="stat-sub">Active enrolments</div></div>
+        <div class="stat-card cyan"><div class="stat-label">Applications</div><div class="stat-value cyan" id="st-apps">—</div><div class="stat-sub">Pending: <span id="st-pending">—</span></div></div>
+        <div class="stat-card gold"><div class="stat-label">Avg. GPA</div><div class="stat-value gold" id="st-gpa">—</div><div class="stat-sub">All departments</div></div>
+        <div class="stat-card green"><div class="stat-label">Avg. Attendance</div><div class="stat-value green" id="st-att">—</div><div class="stat-sub">Current semester</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><div class="card-header"><div class="card-title">Enrollment by Department</div></div><div class="chart-box"><canvas id="deptChart"></canvas></div></div>
+        <div class="card"><div class="card-header"><div class="card-title">Monthly Applications</div></div><div class="chart-box"><canvas id="appsChart"></canvas></div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Recent Applications</div></div>
+          <div class="table-wrap"><table><thead><tr><th>Name</th><th>Dept</th><th>Status</th><th>Date</th></tr></thead><tbody id="recent-apps"></tbody></table></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Fee Summary</div></div>
+          <div id="fee-summary"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── NEW APPLICATION (public form) ── -->
+  <div id="page-apply" class="page">
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">📝 New Admission Application</div><div class="card-subtitle">All fields marked * are required</div></div></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Full Name *</label><input id="f-name" type="text" placeholder="Student full name"></div>
+        <div class="form-group"><label>Father's Name</label><input id="f-father" type="text" placeholder="Father's full name"></div>
+        <div class="form-group"><label>Date of Birth</label><input id="f-dob" type="date"></div>
+        <div class="form-group"><label>Gender *</label><select id="f-gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+        <div class="form-group"><label>Email *</label><input id="f-email" type="email" placeholder="applicant@email.com"></div>
+        <div class="form-group"><label>Phone</label><input id="f-phone" type="tel" placeholder="01XXXXXXXXX"></div>
+        <div class="form-group"><label>Department *</label>
+          <select id="f-dept"><option value="">Select department</option><option value="CSE">CSE</option><option value="EEE">EEE</option><option value="BBA">BBA</option><option value="ENG">English</option><option value="MATH">Mathematics</option><option value="PHY">Physics</option></select></div>
+        <div class="form-group"><label>Semester</label><select id="f-sem"><option>1st</option><option>2nd</option><option>3rd</option><option>4th</option></select></div>
+        <div class="form-group"><label>SSC GPA</label><input id="f-ssc" type="number" step="0.01" min="1" max="5" placeholder="e.g. 4.50"></div>
+        <div class="form-group"><label>HSC GPA</label><input id="f-hsc" type="number" step="0.01" min="1" max="5" placeholder="e.g. 4.25"></div>
+        <div class="form-group"><label>Blood Group</label><select id="f-blood"><option value="">Select</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
+        <div class="form-group"><label>Nationality</label><input id="f-nat" type="text" value="Bangladeshi"></div>
+        <div class="form-group full"><label>Permanent Address</label><textarea id="f-addr" placeholder="Village/Road, District, Division"></textarea></div>
+      </div>
+      <hr>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="submitApplication()">Submit Application</button>
+        <button class="btn btn-ghost"   onclick="clearAppForm()">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ALL APPLICATIONS ── -->
+  <div id="page-applications" class="page">
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">All Applications</div><div class="card-subtitle" id="apps-sub"></div></div></div>
+      <div class="search-row">
+        <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" placeholder="Search name…" oninput="filterApps(this.value)" id="apps-search"></div>
+        <select onchange="loadApplications(this.value)" style="width:160px"><option value="">All Status</option><option>Pending</option><option>Approved</option><option>Rejected</option></select>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>App ID</th><th>Name</th><th>Dept</th><th>SSC</th><th>HSC</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead>
+        <tbody id="apps-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STUDENT DIRECTORY ── -->
+  <div id="page-students" class="page">
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Student Directory</div><div class="card-subtitle" id="stu-sub"></div></div><button class="btn btn-primary" onclick="showPage('enroll',null)">+ Enroll Student</button></div>
+      <div class="search-row">
+        <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" placeholder="Search name or ID…" oninput="searchStudents(this.value)" id="stu-search"></div>
+        <select onchange="filterStudentsDept(this.value)" id="stu-dept-filter" style="width:160px">
+          <option value="">All Depts</option><option value="CSE">CSE</option><option value="EEE">EEE</option><option value="BBA">BBA</option><option value="ENG">English</option><option value="MATH">Mathematics</option><option value="PHY">Physics</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr><th>ID</th><th>Name</th><th>Department</th><th>Semester</th><th>GPA</th><th>Attendance</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="stu-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ENROLL STUDENT ── -->
+  <div id="page-enroll" class="page">
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">➕ Enroll New Student</div><div class="card-subtitle">Creates student record + login account automatically</div></div></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Full Name *</label><input id="e-name" type="text" placeholder="Student full name"></div>
+        <div class="form-group"><label>Email</label><input id="e-email" type="email" placeholder="student@su.edu.bd"></div>
+        <div class="form-group"><label>Phone</label><input id="e-phone" type="tel" placeholder="01XXXXXXXXX"></div>
+        <div class="form-group"><label>Department *</label>
+          <select id="e-dept"><option value="">Select</option><option value="CSE">CSE</option><option value="EEE">EEE</option><option value="BBA">BBA</option><option value="ENG">English</option><option value="MATH">Mathematics</option><option value="PHY">Physics</option></select></div>
+        <div class="form-group"><label>Semester</label><select id="e-sem"><option>1st</option><option>2nd</option><option>3rd</option><option>4th</option><option>5th</option><option>6th</option><option>7th</option><option>8th</option></select></div>
+        <div class="form-group"><label>Gender</label><select id="e-gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select></div>
+        <div class="form-group"><label>Blood Group</label><select id="e-blood"><option value="">Select</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select></div>
+        <div class="form-group"><label>Initial GPA</label><input id="e-gpa" type="number" step="0.01" min="0" max="4" placeholder="0.00 – 4.00"></div>
+        <div class="form-group"><label>Date of Birth</label><input id="e-dob" type="date"></div>
+        <div class="form-group"><label>Login Password</label><input id="e-pw" type="text" value="student123" placeholder="Default: student123"></div>
+        <div class="form-group full"><label>Address</label><textarea id="e-addr" placeholder="Full address"></textarea></div>
+      </div>
+      <hr>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="enrollStudent()">Enroll & Create Login</button>
+        <button class="btn btn-ghost"   onclick="showPage('students',null)">Cancel</button>
+      </div>
+      <div id="enroll-result" style="display:none;margin-top:20px" class="success-banner"></div>
+    </div>
+  </div>
+
+  <!-- ── GRADES ── -->
+  <div id="page-grades" class="page">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Grades & Results</div><div class="card-subtitle">Live from database</div></div>
+      <div id="grades-loading" class="loading-state">Loading…</div>
+      <div class="table-wrap" id="grades-wrap" style="display:none">
+        <table><thead><tr><th>Student ID</th><th>Name</th><th>Dept</th><th>GPA</th><th>Status</th></tr></thead>
+        <tbody id="grades-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ATTENDANCE ── -->
+  <div id="page-attendance" class="page">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Attendance Overview</div></div>
+      <div id="att-loading" class="loading-state">Loading…</div>
+      <div id="att-list" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- ── FEES ── -->
+  <div id="page-fees" class="page">
+    <div class="card">
+      <div class="card-header"><div><div class="card-title">Fee Management</div></div><button class="btn btn-primary" onclick="openAddFeeModal()">+ Add Fee Record</button></div>
+      <div id="fees-loading" class="loading-state">Loading…</div>
+      <div class="table-wrap" id="fees-wrap" style="display:none">
+        <table><thead><tr><th>Student ID</th><th>Name</th><th>Dept</th><th>Semester</th><th>Amount</th><th>Due Date</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="fees-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── COURSES ── -->
+  <div id="page-courses" class="page">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Courses</div><button class="btn btn-primary" onclick="openAddCourseModal()">+ Add Course</button></div>
+      <div id="courses-loading" class="loading-state">Loading…</div>
+      <div class="grid-3" id="courses-grid" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- ── ANALYTICS ── -->
+  <div id="page-analytics" class="page">
+    <div class="grid-2">
+      <div class="card"><div class="card-header"><div class="card-title">Gender Distribution</div></div><div class="chart-box"><canvas id="genderChart"></canvas></div></div>
+      <div class="card"><div class="card-header"><div class="card-title">GPA Distribution</div></div><div class="chart-box"><canvas id="gpaChart"></canvas></div></div>
+    </div>
+    <div class="card"><div class="card-header"><div class="card-title">Department Comparison</div></div><div class="chart-box"><canvas id="radarChart"></canvas></div></div>
+  </div>
+</main>
+
+<!-- FEE MODAL -->
+<div class="modal-overlay" id="fee-modal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Add Fee Record</div><button class="close-btn" onclick="closeModal('fee-modal')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group full"><label>Student ID / Code</label><input id="fm-student" type="text" placeholder="SU-2024-001"></div>
+      <div class="form-group"><label>Semester</label><select id="fm-sem"><option>Semester 1</option><option>Semester 2</option><option>Semester 3</option><option>Semester 4</option><option>Semester 5</option><option>Semester 6</option><option>Semester 7</option><option>Semester 8</option></select></div>
+      <div class="form-group"><label>Amount (৳)</label><input id="fm-amount" type="number" placeholder="12500"></div>
+      <div class="form-group full"><label>Due Date</label><input id="fm-due" type="date"></div>
+    </div>
+    <hr>
+    <div class="btn-row"><button class="btn btn-primary" onclick="addFeeRecord()">Add Record</button><button class="btn btn-ghost" onclick="closeModal('fee-modal')">Cancel</button></div>
+  </div>
+</div>
+
+<!-- COURSE MODAL -->
+<div class="modal-overlay" id="course-modal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Add Course</div><button class="close-btn" onclick="closeModal('course-modal')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Course Code *</label><input id="cm-code" type="text" placeholder="e.g. CSE401"></div>
+      <div class="form-group"><label>Course Name *</label><input id="cm-name" type="text" placeholder="Course name"></div>
+      <div class="form-group"><label>Department *</label><select id="cm-dept"><option value="">Select</option><option value="CSE">CSE</option><option value="EEE">EEE</option><option value="BBA">BBA</option><option value="ENG">English</option><option value="MATH">Mathematics</option><option value="PHY">Physics</option></select></div>
+      <div class="form-group"><label>Credits</label><input id="cm-credits" type="number" value="3" min="1" max="6"></div>
+      <div class="form-group"><label>Total Seats</label><input id="cm-seats" type="number" value="60"></div>
+      <div class="form-group"><label>Semester</label><select id="cm-sem"><option>1st</option><option>2nd</option><option>3rd</option><option>4th</option><option>5th</option><option>6th</option><option>7th</option><option>8th</option></select></div>
+    </div>
+    <hr>
+    <div class="btn-row"><button class="btn btn-primary" onclick="addCourse()">Add Course</button><button class="btn btn-ghost" onclick="closeModal('course-modal')">Cancel</button></div>
+  </div>
+</div>
+
+<div class="notif" id="notif"></div>
+
+<script>
+const user = auth.getUser();
+document.getElementById('sb-name').textContent   = user.name;
+document.getElementById('topbar-name').textContent = user.name.split(' ')[0];
+document.getElementById('topbar-av').textContent  = user.name[0];
+document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('en-BD',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+
+function logout() { auth.clear(); window.location.href = '/login.html'; }
+
+// ── Navigation ──────────────────────────────────────────────
+const PAGE_TITLES = {dashboard:'Dashboard',apply:'New Application',applications:'All Applications',students:'Student Directory',enroll:'Enroll Student',grades:'Grades',attendance:'Attendance',fees:'Fee Management',courses:'Courses',analytics:'Analytics'};
+
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if (el) el.classList.add('active');
+  document.getElementById('page-title').textContent = PAGE_TITLES[name] || name;
+  if (name==='dashboard')    loadDashboard();
+  if (name==='applications') loadApplications('');
+  if (name==='students')     loadStudents();
+  if (name==='grades')       loadGrades();
+  if (name==='attendance')   loadAttendance();
+  if (name==='fees')         loadFees();
+  if (name==='courses')      loadCourses();
+  if (name==='analytics')    loadAnalytics();
+}
+
+// ── Helpers ─────────────────────────────────────────────────
+const COLORS = ['#3b82f6','#06b6d4','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6'];
+const chartCache = {};
+function initChart(id, factory) {
+  if (chartCache[id]) { chartCache[id].destroy(); delete chartCache[id]; }
+  chartCache[id] = factory();
+}
+function badge(status) {
+  const m = {Active:'badge-active',Paid:'badge-active',Approved:'badge-active',Present:'badge-active',Pending:'badge-pending',Overdue:'badge-inactive',Rejected:'badge-inactive',Inactive:'badge-inactive',Suspended:'badge-inactive',Late:'badge-pending'};
+  return `<span class="badge ${m[status]||'badge-pending'}">${status}</span>`;
+}
+function showNotif(msg, type='success') {
+  const n = document.getElementById('notif');
+  n.textContent = msg; n.className = 'notif'+(type==='error'?' error':'')+' show';
+  setTimeout(()=>n.classList.remove('show'), 3200);
+}
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
+
+// ── DASHBOARD ───────────────────────────────────────────────
+async function loadDashboard() {
+  document.getElementById('dash-loading').style.display='block';
+  document.getElementById('dash-content').style.display='none';
+  try {
+    const [stats, apps, students] = await Promise.all([
+      api.getStats(), api.getApplications({status:'Pending'}), api.getStudents()
+    ]);
+    document.getElementById('st-students').textContent = stats.totalStudents;
+    document.getElementById('st-apps').textContent     = stats.totalApps;
+    document.getElementById('st-pending').textContent  = apps.length;
+    document.getElementById('st-gpa').textContent      = stats.avgGPA || '—';
+    document.getElementById('st-att').textContent      = stats.avgAttendance ? stats.avgAttendance+'%' : '—';
+
+    // Recent apps
+    const recentApps = await api.getApplications({});
+    document.getElementById('recent-apps').innerHTML = recentApps.slice(0,6).map(a=>`
+      <tr><td>${a.full_name}</td><td><span class="tag">${a.dept_code||'—'}</span></td>
+      <td>${badge(a.status)}</td><td class="mono">${a.created_at?.split('T')[0]||'—'}</td></tr>`).join('');
+
+    // Fee summary
+    const f = stats.feeStats||{};
+    document.getElementById('fee-summary').innerHTML = `
+      <div class="info-grid">
+        <div class="info-row"><span>Collected</span><strong style="color:var(--green)">৳${Number(f.collected||0).toLocaleString()}</strong></div>
+        <div class="info-row"><span>Pending</span><strong style="color:var(--gold)">৳${Number(f.pending||0).toLocaleString()}</strong></div>
+        <div class="info-row"><span>Total Due</span><strong>৳${Number(f.total||0).toLocaleString()}</strong></div>
+      </div>`;
+
+    document.getElementById('dash-loading').style.display='none';
+    document.getElementById('dash-content').style.display='block';
+
+    // Charts
+    const depts = stats.deptBreakdown||[];
+    initChart('deptChart', ()=>new Chart(document.getElementById('deptChart'),{
+      type:'doughnut',
+      data:{labels:depts.map(d=>d.code),datasets:[{data:depts.map(d=>parseInt(d.count)),backgroundColor:COLORS,borderWidth:0,hoverOffset:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:'#8faac4',font:{size:11}}}}}
+    }));
+
+    const monthly = stats.monthlyApps||[];
+    initChart('appsChart', ()=>new Chart(document.getElementById('appsChart'),{
+      type:'line',
+      data:{labels:monthly.map(m=>m.month),datasets:[{label:'Applications',data:monthly.map(m=>parseInt(m.count)),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.08)',fill:true,tension:0.4,pointRadius:4,pointBackgroundColor:'#3b82f6'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#64748b'},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#64748b'},grid:{color:'rgba(255,255,255,0.04)'}}}}
+    }));
+
+  } catch(e) {
+    document.getElementById('dash-loading').textContent = '⚠️ Failed to load: '+e.message;
+  }
+}
+
+// ── APPLICATIONS ────────────────────────────────────────────
+let _allApps = [];
+async function loadApplications(statusFilter='') {
+  try {
+    _allApps = await api.getApplications(statusFilter ? {status:statusFilter} : {});
+    document.getElementById('apps-sub').textContent = `${_allApps.length} total applications`;
+    renderAppsTable(_allApps);
+  } catch(e) { showNotif('Failed to load applications: '+e.message,'error'); }
+}
+function renderAppsTable(list) {
+  document.getElementById('apps-tbody').innerHTML = list.map(a=>`
+    <tr>
+      <td class="mono">${a.app_code}</td>
+      <td>${a.full_name}</td>
+      <td><span class="tag">${a.dept_code||'—'}</span></td>
+      <td>${a.ssc_gpa||'—'}</td><td>${a.hsc_gpa||'—'}</td>
+      <td>${badge(a.status)}</td>
+      <td class="mono">${a.created_at?.split('T')[0]||'—'}</td>
+      <td class="action-cell">
+        ${a.status==='Pending'?`
+          <button class="btn-xs btn-success" onclick="updateAppStatus('${a.id}','Approved')">✓ Approve</button>
+          <button class="btn-xs btn-danger"  onclick="updateAppStatus('${a.id}','Rejected')">✗ Reject</button>`:`
+          <button class="btn-xs btn-ghost"   onclick="updateAppStatus('${a.id}','Pending')">↺ Reset</button>`}
+      </td>
+    </tr>`).join('');
+}
+function filterApps(v) {
+  renderAppsTable(_allApps.filter(a=>a.full_name.toLowerCase().includes(v.toLowerCase())||a.app_code.includes(v)));
+}
+async function updateAppStatus(id, status) {
+  try {
+    await api.updateAppStatus(id, {status});
+    showNotif(`Application ${status.toLowerCase()}`);
+    loadApplications('');
+  } catch(e) { showNotif('Failed: '+e.message,'error'); }
+}
+
+async function submitApplication() {
+  const name = document.getElementById('f-name').value.trim();
+  const dept = document.getElementById('f-dept').value;
+  if (!name||!dept) { showNotif('Name and department required','error'); return; }
+  try {
+    await api.submitApp({
+      full_name:    name,
+      email:        document.getElementById('f-email').value,
+      phone:        document.getElementById('f-phone').value,
+      dept_code:    dept,
+      gender:       document.getElementById('f-gender').value,
+      date_of_birth:document.getElementById('f-dob').value||null,
+      father_name:  document.getElementById('f-father').value,
+      address:      document.getElementById('f-addr').value,
+      blood_group:  document.getElementById('f-blood').value,
+      nationality:  document.getElementById('f-nat').value,
+      ssc_gpa:      parseFloat(document.getElementById('f-ssc').value)||null,
+      hsc_gpa:      parseFloat(document.getElementById('f-hsc').value)||null,
+      semester:     document.getElementById('f-sem').value,
+    });
+    showNotif('Application submitted successfully!');
+    clearAppForm();
+  } catch(e) { showNotif('Failed: '+e.message,'error'); }
+}
+function clearAppForm() {
+  ['f-name','f-father','f-email','f-phone','f-ssc','f-hsc','f-addr'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('f-nat').value='Bangladeshi';
+  ['f-gender','f-dept','f-blood'].forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
+  document.getElementById('f-dob').value='';
+}
+
+// ── STUDENTS ────────────────────────────────────────────────
+let _allStudents = [];
+async function loadStudents(params={}) {
+  try {
+    _allStudents = await api.getStudents(params);
+    document.getElementById('stu-sub').textContent = `${_allStudents.length} students`;
+    renderStudentsTable(_allStudents);
+  } catch(e) { showNotif('Failed to load students: '+e.message,'error'); }
+}
+function renderStudentsTable(list) {
+  document.getElementById('stu-tbody').innerHTML = list.map(s=>`
+    <tr>
+      <td class="mono">${s.student_code}</td>
+      <td>${s.full_name}</td>
+      <td><span class="tag">${s.dept_code||'—'}</span></td>
+      <td>${s.semester||'—'}</td>
+      <td class="mono" style="color:${parseFloat(s.gpa)>=3.5?'var(--green)':parseFloat(s.gpa)>=3.0?'var(--accent)':'var(--gold)'}">${parseFloat(s.gpa||0).toFixed(2)}</td>
+      <td>${s.attendance_pct||0}%</td>
+      <td>${badge(s.status)}</td>
+      <td class="action-cell">
+        <button class="btn-xs btn-danger" onclick="deleteStudent('${s.id}','${s.full_name}')">Remove</button>
+      </td>
+    </tr>`).join('');
+}
+function searchStudents(v) {
+  loadStudents({search:v, dept:document.getElementById('stu-dept-filter').value});
+}
+function filterStudentsDept(v) {
+  loadStudents({dept:v, search:document.getElementById('stu-search').value});
+}
+async function deleteStudent(id, name) {
+  if (!confirm(`Remove ${name}?`)) return;
+  try {
+    await api.deleteStudent(id);
+    showNotif(`${name} removed`);
+    loadStudents();
+  } catch(e) { showNotif('Failed: '+e.message,'error'); }
+}
+
+async function enrollStudent() {
+  const name = document.getElementById('e-name').value.trim();
+  const dept = document.getElementById('e-dept').value;
+  if (!name||!dept) { showNotif('Name and department required','error'); return; }
+  try {
+    const s = await api.createStudent({
+      full_name:    name,
+      email:        document.getElementById('e-email').value||null,
+      phone:        document.getElementById('e-phone').value||null,
+      dept_code:    dept,
+      semester:     document.getElementById('e-sem').value,
+      gender:       document.getElementById('e-gender').value||null,
+      blood_group:  document.getElementById('e-blood').value||null,
+      gpa:          parseFloat(document.getElementById('e-gpa').value)||0,
+      date_of_birth:document.getElementById('e-dob').value||null,
+      address:      document.getElementById('e-addr').value||null,
+      password:     document.getElementById('e-pw').value||'student123',
+    });
+    const res = document.getElementById('enroll-result');
+    res.style.display='block';
+    res.innerHTML=`✅ <strong>${s.full_name}</strong> enrolled!<br>
+      Student ID: <code>${s.student_code}</code> &nbsp;|&nbsp;
+      Login: <code>${s.student_code}</code> / <code>${document.getElementById('e-pw').value||'student123'}</code>`;
+    showNotif(`Student ${s.student_code} enrolled!`);
+  } catch(e) { showNotif('Enrollment failed: '+e.message,'error'); }
+}
+
+// ── GRADES ──────────────────────────────────────────────────
+async function loadGrades() {
+  document.getElementById('grades-loading').style.display='block';
+  document.getElementById('grades-wrap').style.display='none';
+  try {
+    const students = await api.getStudents();
+    document.getElementById('grades-tbody').innerHTML = students.map(s=>`
+      <tr>
+        <td class="mono">${s.student_code}</td>
+        <td>${s.full_name}</td>
+        <td><span class="tag">${s.dept_code||'—'}</span></td>
+        <td class="mono" style="color:var(--green)">${parseFloat(s.gpa||0).toFixed(2)}</td>
+        <td>${badge(s.status)}</td>
+      </tr>`).join('');
+    document.getElementById('grades-loading').style.display='none';
+    document.getElementById('grades-wrap').style.display='block';
+  } catch(e) { document.getElementById('grades-loading').textContent='⚠️ '+e.message; }
+}
+
+// ── ATTENDANCE ──────────────────────────────────────────────
+async function loadAttendance() {
+  document.getElementById('att-loading').style.display='block';
+  document.getElementById('att-list').style.display='none';
+  try {
+    const students = await api.getStudents();
+    document.getElementById('att-list').innerHTML = students.map(s=>{
+      const pct = parseInt(s.attendance_pct||0);
+      const color = pct>=85?'var(--green)':pct>=70?'var(--accent)':'var(--red)';
+      return `<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;padding:0 4px">
+        <div style="width:180px;font-size:13px;color:var(--light)">${s.full_name}</div>
+        <div style="flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden">
+          <div style="width:${pct}%;height:100%;border-radius:4px;background:${color}"></div></div>
+        <div style="width:42px;text-align:right;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">${pct}%</div>
+      </div>`;
+    }).join('');
+    document.getElementById('att-loading').style.display='none';
+    document.getElementById('att-list').style.display='block';
+  } catch(e) { document.getElementById('att-loading').textContent='⚠️ '+e.message; }
+}
+
+// ── FEES ────────────────────────────────────────────────────
+async function loadFees() {
+  document.getElementById('fees-loading').style.display='block';
+  document.getElementById('fees-wrap').style.display='none';
+  try {
+    const fees = await api.getAllFees();
+    document.getElementById('fees-tbody').innerHTML = fees.map(f=>`
+      <tr>
+        <td class="mono">${f.student_code}</td>
+        <td>${f.full_name}</td>
+        <td><span class="tag">${f.dept_code||'—'}</span></td>
+        <td>${f.semester}</td>
+        <td class="mono">৳${Number(f.amount).toLocaleString()}</td>
+        <td class="mono">${f.due_date?.split('T')[0]||'—'}</td>
+        <td>${badge(f.status)}</td>
+        <td>${f.status!=='Paid'?`<button class="btn-xs btn-success" onclick="markPaid('${f.id}')">Mark Paid</button>`:'—'}</td>
+      </tr>`).join('');
+    document.getElementById('fees-loading').style.display='none';
+    document.getElementById('fees-wrap').style.display='block';
+  } catch(e) { document.getElementById('fees-loading').textContent='⚠️ '+e.message; }
+}
+async function markPaid(id) {
+  try { await api.markFeePaid(id,'Cash'); showNotif('Fee marked as paid'); loadFees(); }
+  catch(e) { showNotif('Failed: '+e.message,'error'); }
+}
+function openAddFeeModal() {
+  document.getElementById('fm-due').value = new Date().toISOString().split('T')[0];
+  openModal('fee-modal');
+}
+async function addFeeRecord() {
+  const studentCode = document.getElementById('fm-student').value.trim();
+  const amount      = document.getElementById('fm-amount').value;
+  if (!studentCode||!amount) { showNotif('Student ID and amount required','error'); return; }
+  try {
+    const students = await api.getStudents({search:studentCode});
+    if (!students.length) { showNotif('Student not found','error'); return; }
+    await api.createFee({student_id:students[0].id, semester:document.getElementById('fm-sem').value, amount:parseFloat(amount), due_date:document.getElementById('fm-due').value});
+    closeModal('fee-modal'); showNotif('Fee record added'); loadFees();
+  } catch(e) { showNotif('Failed: '+e.message,'error'); }
+}
+
+// ── COURSES ─────────────────────────────────────────────────
+async function loadCourses() {
+  document.getElementById('courses-loading').style.display='block';
+  document.getElementById('courses-grid').style.display='none';
+  try {
+    const courses = await api.getCourses();
+    document.getElementById('courses-grid').innerHTML = courses.map((c,i)=>`
+      <div class="card" style="margin:0;border-top:3px solid ${COLORS[i%COLORS.length]}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <span class="tag">${c.dept_code||'—'}</span>
+          <button class="btn-xs btn-danger" onclick="deleteCourse('${c.id}','${c.name}')">✕</button>
+        </div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:4px">${c.name}</div>
+        <div class="mono" style="font-size:11px;color:var(--muted);margin-bottom:10px">${c.code} · ${c.credits} Credits</div>
+        <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:6px">
+          <div style="width:${Math.min(100,Math.round((parseInt(c.enrolled)||0)/c.total_seats*100))}%;height:100%;background:${COLORS[i%COLORS.length]}88;border-radius:3px"></div></div>
+        <div style="font-size:11px;color:var(--muted)">${c.enrolled||0}/${c.total_seats} seats · ${c.teacher_name||'No teacher assigned'}</div>
+      </div>`).join('');
+    document.getElementById('courses-loading').style.display='none';
+    document.getElementById('courses-grid').style.display='grid';
+  } catch(e) { document.getElementById('courses-loading').textContent='⚠️ '+e.message; }
+}
+function openAddCourseModal() { openModal('course-modal'); }
+async function addCourse() {
+  const code = document.getElementById('cm-code').value.trim();
+  const name = document.getElementById('cm-name').value.trim();
+  const dept = document.getElementById('cm-dept').value;
+  if (!code||!name||!dept) { showNotif('Code, name and dept required','error'); return; }
+  try {
+    await api.createCourse({code, name, dept_code:dept, credits:parseInt(document.getElementById('cm-credits').value)||3, total_seats:parseInt(document.getElementById('cm-seats').value)||60, semester:document.getElementById('cm-sem').value});
+    closeModal('course-modal'); showNotif('Course added'); loadCourses();
+  } catch(e) { showNotif('Failed: '+e.message,'error'); }
+}
+async function deleteCourse(id, name) {
+  if (!confirm(`Delete course "${name}"?`)) return;
+  try { await api.deleteCourse(id); showNotif('Course deleted'); loadCourses(); }
+  catch(e) { showNotif('Failed: '+e.message,'error'); }
+}
+
+// ── ANALYTICS ───────────────────────────────────────────────
+async function loadAnalytics() {
+  try {
+    const students = await api.getStudents();
+    const male   = students.filter(s=>s.gender==='Male').length;
+    const female = students.filter(s=>s.gender==='Female').length;
+    initChart('genderChart',()=>new Chart(document.getElementById('genderChart'),{type:'doughnut',data:{labels:['Male','Female'],datasets:[{data:[male,female],backgroundColor:['#3b82f6','#ec4899'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#8faac4',padding:16}}}}}));
+    const gpaRanges = [[0,2.5,'<2.5'],[2.5,3.0,'2.5-3.0'],[3.0,3.5,'3.0-3.5'],[3.5,4.0,'3.5-4.0']];
+    const counts = gpaRanges.map(([lo,hi])=>students.filter(s=>parseFloat(s.gpa||0)>=lo&&parseFloat(s.gpa||0)<hi).length);
+    initChart('gpaChart',()=>new Chart(document.getElementById('gpaChart'),{type:'bar',data:{labels:gpaRanges.map(r=>r[2]),datasets:[{data:counts,backgroundColor:['#ef4444','#f59e0b','#3b82f6','#10b981'],borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#64748b'},grid:{display:false}},y:{ticks:{color:'#64748b'},grid:{color:'rgba(255,255,255,0.04)'}}}}}));
+    initChart('radarChart',()=>new Chart(document.getElementById('radarChart'),{type:'radar',data:{labels:['GPA','Attendance','Enrollment','Pass Rate','Satisfaction'],datasets:[{label:'CSE',data:[88,82,90,85,78],borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.1)'},{label:'EEE',data:[92,88,75,90,82],borderColor:'#10b981',backgroundColor:'rgba(16,185,129,0.1)'},{label:'BBA',data:[80,75,85,78,72],borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.1)'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#8faac4'}}},scales:{r:{ticks:{color:'#64748b',backdropColor:'transparent'},grid:{color:'rgba(255,255,255,0.06)'},pointLabels:{color:'#8faac4'}}}}}));
+  } catch(e) { showNotif('Analytics error: '+e.message,'error'); }
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+</body>
+</html>
